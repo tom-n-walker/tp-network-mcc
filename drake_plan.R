@@ -1,8 +1,8 @@
 ################################################################################
-#### Project: TP Network
+#### Project: SNF field experiment
 #### Title:   Drake plan
 #### Author:  Tom Walker (thomas.walker@usys.ethz.ch)
-#### Date:    03 November 2020
+#### Date:    26 March 2021
 #### ---------------------------------------------------------------------------
 
 
@@ -37,28 +37,16 @@ sapply(
 loadPlan <- drake_plan(
   # Load all data
   seqData = load_raw_data(),
-  climData = load_clim_data(),
-  soilData = load_soil_data(),
   # Subset ASV data
   subSeqData = split_raw_data(
     input = seqData,
-    project = "MT"
+    project = "[F]|[S]"
   )
 )
 formatPlan <- drake_plan(
-  # Sample and metadata
-  sampleData = compile_sample_data(
-    metadata = subSeqData$metadata,
-    climData = climData,
-    soilData = soilData
-  ),
-  siteData = compile_site_data(
-    metadata = subSeqData$metadata,
-    climData = climData
-  ),
   # Filter and normalise ASV data
   bacFull = clean_asv_data(
-    metadata = sampleData,
+    metadata = subSeqData$metadata,
     counts = subSeqData$counts$bacteria,
     taxonomy = subSeqData$taxonomy$bacteria,
     perc.cutoff = 0.0001, 
@@ -67,7 +55,7 @@ formatPlan <- drake_plan(
     count.cutoff = 2500
   ),
   funFull = clean_asv_data(
-    metadata = sampleData,
+    metadata = subSeqData$metadata,
     counts = subSeqData$counts$fungi,
     taxonomy = subSeqData$taxonomy$fungi,
     perc.cutoff = 0.0001, 
@@ -86,30 +74,30 @@ qcPlan <- drake_plan(
     seqData = funFull
   )
 )
-
-## Analysis ----
-analysePlan <- drake_plan(
-  # Select filtering option
-  fungi = funFull$percGMPR,
-  bacteria = bacFull$percGMPR,
-  # Subset for simplicity
-  bacSub = tax_glom(bacteria, taxrank = "Phylum"),
-  funSub = tax_glom(fungi, taxrank = "Class"),
-  # NMDS on full data
-  funFullNMDS = sitewise_nmds(seqData = fungi),
-  bacFullNMDS = sitewise_nmds(seqData = bacteria),
-  # NMDS on subset data
-  funSubNMDS = sitewise_nmds(seqData = funSub),
-  bacSubNMDS = sitewise_nmds(seqData = bacSub),
-  # Collate data
-  finalDF = collate_final(
-    funSeq = fungi,
-    funFullNMDS = funFullNMDS,
-    funSubNMDS = funSubNMDS,
-    bacFullNMDS = bacFullNMDS,
-    bacSubNMDS = bacSubNMDS
-  )
-)
+# 
+# ## Analysis ----
+# analysePlan <- drake_plan(
+#   # Select filtering option
+#   fungi = funFull$percGMPR,
+#   bacteria = bacFull$percGMPR,
+#   # Subset for simplicity
+#   bacSub = tax_glom(bacteria, taxrank = "Phylum"),
+#   funSub = tax_glom(fungi, taxrank = "Class"),
+#   # NMDS on full data
+#   funFullNMDS = sitewise_nmds(seqData = fungi),
+#   bacFullNMDS = sitewise_nmds(seqData = bacteria),
+#   # NMDS on subset data
+#   funSubNMDS = sitewise_nmds(seqData = funSub),
+#   bacSubNMDS = sitewise_nmds(seqData = bacSub),
+#   # Collate data
+#   finalDF = collate_final(
+#     funSeq = fungi,
+#     funFullNMDS = funFullNMDS,
+#     funSubNMDS = funSubNMDS,
+#     bacFullNMDS = bacFullNMDS,
+#     bacSubNMDS = bacSubNMDS
+#   )
+# )
 
 
 #### MAKE ----------------------------------------------------------------------
@@ -118,8 +106,7 @@ analysePlan <- drake_plan(
 thePlan <- bind_rows(
   loadPlan,
   formatPlan,
-  qcPlan,
-  analysePlan
+  qcPlan
 )
 
 ## Make ----
